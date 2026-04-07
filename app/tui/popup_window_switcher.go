@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -41,7 +42,7 @@ func (p *winSwitcherPopup) handleKey(key string) (action string, idx int) {
 func (p *winSwitcherPopup) view(totalW, totalH int) string {
 	const popupW = 50
 
-	var lines []string
+	lines := make([]string, 0, len(p.names)+2)
 
 	for i, name := range p.names {
 		cursor := "  "
@@ -52,13 +53,14 @@ func (p *winSwitcherPopup) view(totalW, totalH int) string {
 			style = "\033[1m"
 			reset = "\033[0m"
 		}
-		num := fmt.Sprintf("%d", i+1)
-		line := fmt.Sprintf(" %s%s%s. %s%s", cursor, style, num, name, reset)
-		lines = append(lines, line)
+		num := strconv.Itoa(i + 1)
+		lines = append(lines, fmt.Sprintf(" %s%s%s. %s%s", cursor, style, num, name, reset))
 	}
 
-	lines = append(lines, "")
-	lines = append(lines, " \033[38;5;242m↑↓ navigate  Enter: switch  n: new  d: delete  Esc: close\033[0m")
+	lines = append(lines,
+		"",
+		" \033[38;5;242m↑↓ navigate  Enter: switch  n: new  d: delete  Esc: close\033[0m",
+	)
 
 	box := popupBox("Windows", lines, popupW)
 	return overlayCenter(strings.Repeat("\n", totalH), box, totalW, totalH)

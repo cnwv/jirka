@@ -1,7 +1,7 @@
 package tui
 
 import (
-	"buble_jira/internal/model"
+	"github.com/cnwv/jirka/app/model"
 	"fmt"
 	"strings"
 
@@ -30,17 +30,11 @@ func (d *TicketDetailModel) SetTicket(t *model.Ticket) {
 }
 
 func (d *TicketDetailModel) ScrollUp() {
-	d.ScrollOffset -= 10
-	if d.ScrollOffset < 0 {
-		d.ScrollOffset = 0
-	}
+	d.ScrollOffset = max(d.ScrollOffset-10, 0)
 }
 
 func (d *TicketDetailModel) ScrollDown() {
-	maxOffset := len(d.lines) - d.visibleHeight()
-	if maxOffset < 0 {
-		maxOffset = 0
-	}
+	maxOffset := max(len(d.lines)-d.visibleHeight(), 0)
 	d.ScrollOffset += 10
 	if d.ScrollOffset > maxOffset {
 		d.ScrollOffset = maxOffset
@@ -65,10 +59,7 @@ func (d *TicketDetailModel) buildLines() {
 	var lines []string
 
 	// Issue key + summary, wrap if needed
-	wrapW := d.Width - 2
-	if wrapW < 10 {
-		wrapW = 10
-	}
+	wrapW := max(d.Width-2, 10)
 	titlePlain := t.IssueKey + " " + t.Summary
 	titleWrapped := wrapLine(titlePlain, wrapW)
 	for i, wl := range titleWrapped {
@@ -83,33 +74,33 @@ func (d *TicketDetailModel) buildLines() {
 			lines = append(lines, fmt.Sprintf("\033[1;37m%s\033[0m", wl))
 		}
 	}
-	lines = append(lines, "")
-	// Fields: labels in yellow, values in white
-	lines = append(lines, fmt.Sprintf("\033[38;5;222mStatus:\033[0m %s", t.StatusName))
-	lines = append(lines, fmt.Sprintf("\033[38;5;222mPriority:\033[0m %s", t.Priority))
-	lines = append(lines, fmt.Sprintf("\033[38;5;222mType:\033[0m %s", t.IssueType))
+	lines = append(lines,
+		"",
+		"\033[38;5;222mStatus:\033[0m "+t.StatusName,
+		"\033[38;5;222mPriority:\033[0m "+t.Priority,
+		"\033[38;5;222mType:\033[0m "+t.IssueType,
+	)
 	if t.Components != "" {
-		lines = append(lines, fmt.Sprintf("\033[38;5;222mComponents:\033[0m %s", t.Components))
+		lines = append(lines, "\033[38;5;222mComponents:\033[0m "+t.Components)
 	}
 
 	assignee := t.AssigneeName
 	if !t.IsAssigned {
 		assignee = "Unassigned"
 	}
-	lines = append(lines, fmt.Sprintf("\033[38;5;222mAssignee:\033[0m %s", assignee))
-	lines = append(lines, fmt.Sprintf("\033[38;5;222mReporter:\033[0m %s", t.ReporterName))
-	lines = append(lines, fmt.Sprintf("\033[38;5;222mCreated:\033[0m %s", t.Created.Format("2006-01-02 15:04")))
-	lines = append(lines, "")
+	lines = append(lines,
+		"\033[38;5;222mAssignee:\033[0m "+assignee,
+		"\033[38;5;222mReporter:\033[0m "+t.ReporterName,
+		"\033[38;5;222mCreated:\033[0m "+t.Created.Format("2006-01-02 15:04"),
+		"",
+	)
 
 	if t.Description != "" {
 		lines = append(lines, "\033[38;5;222mDescription:\033[0m")
 		desc := strings.ReplaceAll(t.Description, "\r", "")
 		desc = formatJiraMarkup(desc)
 		descLines := strings.Split(desc, "\n")
-		wrapW := d.Width - 2 // inner width (minus border chars)
-		if wrapW < 10 {
-			wrapW = 10
-		}
+		wrapW := max(d.Width-2, 10) // inner width (minus border chars)
 		for _, dl := range descLines {
 			wrapped := wrapLine(dl, wrapW)
 			for _, wl := range wrapped {
@@ -159,12 +150,7 @@ func (d *TicketDetailModel) View() string {
 		return ""
 	}
 
-	innerWidth := d.Width - 2
-	// content lines = total height - top border - bottom border
-	vis := d.Height - 2
-	if vis < 1 {
-		vis = 1
-	}
+	vis := max(d.Height-2, 1) // content lines = total height - top/bottom borders
 
 	// Reserve 1 line for scroll indicator when focused and content overflows
 	contentVis := vis
@@ -173,86 +159,25 @@ func (d *TicketDetailModel) View() string {
 	}
 
 	start := d.ScrollOffset
-	end := start + contentVis
-	if end > len(d.lines) {
-		end = len(d.lines)
-	}
+	end := min(start+contentVis, len(d.lines))
 	if start > len(d.lines) {
 		start = len(d.lines)
 	}
 
-	// Build content lines
-	var contentBuf strings.Builder
-	linesWritten := 0
+	contentLines := make([]string, 0, vis)
 	for i := start; i < end; i++ {
-		if linesWritten > 0 {
-			contentBuf.WriteByte('\n')
-		}
-		line := d.lines[i]
-		if visibleWidth(line) > innerWidth {
-			line = truncateAnsi(line, innerWidth)
-		}
-		contentBuf.WriteString(line)
-		linesWritten++
+		contentLines = append(contentLines, d.lines[i])
 	}
 
 	if d.Focused && len(d.lines) > vis {
-		contentBuf.WriteByte('\n')
-		contentBuf.WriteString(fmt.Sprintf("\033[38;5;242m[%d/%d]\033[0m", d.ScrollOffset+1, len(d.lines)-vis+1))
-		linesWritten++
+		contentLines = append(contentLines, fmt.Sprintf("\033[38;5;242m[%d/%d]\033[0m", d.ScrollOffset+1, len(d.lines)-vis+1))
 	}
 
-	// Pad remaining lines
-	for linesWritten < vis {
-		contentBuf.WriteByte('\n')
-		linesWritten++
-	}
-
-	// Build bordered output
-	borderColor := "38;5;240"
-	if d.Focused {
-		borderColor = "38;5;245"
-	}
-	titleColor := "38;5;147" // soft lavender for detail panel
+	const detailTitleColor = "38;5;147" // soft lavender
 	keyNum := d.KeyNumber
 	if keyNum <= 0 {
 		keyNum = 7
 	}
-	titleText := fmt.Sprintf("%d:Ticket", keyNum)
-	titleRendered := fmt.Sprintf("\033[1;%sm%s\033[0m", titleColor, titleText)
-
-	var out strings.Builder
-
-	// Top border
-	out.WriteString(fmt.Sprintf("\033[%sm╭─\033[0m %s \033[%sm", borderColor, titleRendered, borderColor))
-	topUsed := 1 + 1 + len(titleText) + 1
-	for topUsed < innerWidth {
-		out.WriteString("─")
-		topUsed++
-	}
-	out.WriteString("╮\033[0m\n")
-
-	// Content lines with side borders
-	for _, line := range strings.Split(contentBuf.String(), "\n") {
-		out.WriteString(fmt.Sprintf("\033[%sm│\033[0m", borderColor))
-		lineW := visibleWidth(line)
-		if lineW > innerWidth {
-			out.WriteString(truncateAnsi(line, innerWidth))
-		} else {
-			out.WriteString(line)
-			for i := lineW; i < innerWidth; i++ {
-				out.WriteByte(' ')
-			}
-		}
-		out.WriteString(fmt.Sprintf("\033[%sm│\033[0m\n", borderColor))
-	}
-
-	// Bottom border
-	out.WriteString(fmt.Sprintf("\033[%sm╰", borderColor))
-	for i := 0; i < innerWidth; i++ {
-		out.WriteString("─")
-	}
-	out.WriteString("╯\033[0m")
-
-	return out.String()
+	title := fmt.Sprintf("%d:Ticket", keyNum)
+	return borderedBox(title, detailTitleColor, contentLines, d.Width, d.Height, d.Focused)
 }

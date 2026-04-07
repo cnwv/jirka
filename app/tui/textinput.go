@@ -1,6 +1,9 @@
 package tui
 
-import "strings"
+import (
+	"strings"
+	"unicode/utf8"
+)
 
 // textInput is a simple single-line text input widget.
 type textInput struct {
@@ -78,30 +81,29 @@ func (t *textInput) view(width int) string {
 	}
 	raw := prefix + "\033[7m" + cur + "\033[0m" + suffix
 	if width > 0 && visibleWidth(raw) > width {
-		visible := width - 1
-		start := t.cursor - visible/2
-		if start < 0 {
-			start = 0
-		}
-		end := start + visible
-		if end > len(runes) {
-			end = len(runes)
-			start = end - visible
-			if start < 0 {
-				start = 0
-			}
-		}
-		p := string(runes[start:t.cursor])
-		var c, s string
-		if t.cursor < end {
-			c = string(runes[t.cursor])
-			s = string(runes[t.cursor+1 : end])
-		} else {
-			c = " "
-		}
-		raw = p + "\033[7m" + c + "\033[0m" + s
+		raw = t.viewTruncated(runes, width)
 	}
 	return raw
+}
+
+func (t *textInput) viewTruncated(runes []rune, width int) string {
+	visible := width - 1
+	start := t.cursor - visible/2
+	start = max(start, 0)
+	end := start + visible
+	if end > len(runes) {
+		end = len(runes)
+		start = max(end-visible, 0)
+	}
+	p := string(runes[start:t.cursor])
+	var c, s string
+	if t.cursor < end {
+		c = string(runes[t.cursor])
+		s = string(runes[t.cursor+1 : end])
+	} else {
+		c = " "
+	}
+	return p + "\033[7m" + c + "\033[0m" + s
 }
 
 // viewReadonly renders the value without a cursor (when field is not focused).
@@ -113,7 +115,7 @@ func (t *textInput) viewReadonly(width int) string {
 	return t.Value
 }
 
-// Set sets the value and moves cursor to end.
+// set sets the value and moves cursor to end.
 func (t *textInput) set(v string) {
 	if t.maxLen > 0 {
 		runes := []rune(v)
@@ -125,14 +127,9 @@ func (t *textInput) set(v string) {
 	t.cursor = len([]rune(v))
 }
 
-func (t *textInput) clear() {
-	t.Value = ""
-	t.cursor = 0
-}
-
 // handleKey processes a key string from tea.KeyPressMsg.String().
 // Returns true if the key was consumed.
-func (t *textInput) handleKey(key string) bool {
+func (t *textInput) handleKey(key string) {
 	switch key {
 	case "left", "ctrl+b":
 		t.moveLeft()
@@ -154,28 +151,27 @@ func (t *textInput) handleKey(key string) bool {
 		t.Value = string(runes[t.cursor:])
 		t.cursor = 0
 	default:
-		if len(key) == 1 {
-			r := rune(key[0])
-			if r >= 32 && r != 127 {
-				t.insert(r)
-				return true
-			}
-		}
-		if len([]rune(key)) == 1 && key != "esc" && key != "tab" && key != "enter" {
-			r := []rune(key)[0]
-			if r >= 32 {
-				t.insert(r)
-				return true
-			}
-		}
-		if strings.HasPrefix(key, "shift+") && len(key) == 7 {
-			r := rune(key[6])
-			if r >= 'a' && r <= 'z' {
-				t.insert(r - 32)
-				return true
-			}
-		}
-		return false
+		t.handleCharKey(key)
 	}
-	return true
+}
+
+func (t *textInput) handleCharKey(key string) {
+	if len(key) == 1 {
+		r := rune(key[0])
+		if r >= 32 && r != 127 {
+			t.insert(r)
+			return
+		}
+	}
+	r, _ := utf8.DecodeRuneInString(key)
+	if r != utf8.RuneError && r >= 32 && key != "esc" && key != "tab" && key != "enter" {
+		t.insert(r)
+		return
+	}
+	if strings.HasPrefix(key, "shift+") && len(key) == 7 {
+		r := rune(key[6])
+		if r >= 'a' && r <= 'z' {
+			t.insert(r - 32)
+		}
+	}
 }

@@ -69,12 +69,15 @@ func formatJiraMarkup(text string) string {
 
 	// *bold* → bold (careful: only match word-bounded)
 	text = reStarBold.ReplaceAllStringFunc(text, func(s string) string {
-		// Preserve leading/trailing whitespace
 		trimmed := strings.TrimSpace(s)
 		if len(trimmed) >= 2 && trimmed[0] == '*' && trimmed[len(trimmed)-1] == '*' {
 			inner := trimmed[1 : len(trimmed)-1]
-			prefix := s[:strings.Index(s, "*")]
-			suffix := s[strings.LastIndex(s, "*")+1:]
+			prefix, _, found := strings.Cut(s, "*")
+			if !found {
+				return s
+			}
+			lastStar := strings.LastIndex(s, "*")
+			suffix := s[lastStar+1:]
 			return prefix + "\033[1m" + inner + "\033[22m" + suffix
 		}
 		return s

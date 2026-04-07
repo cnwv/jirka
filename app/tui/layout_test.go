@@ -1,8 +1,8 @@
 package tui
 
 import (
-	"buble_jira/internal/config"
-	"buble_jira/internal/model"
+	"github.com/cnwv/jirka/app/config"
+	"github.com/cnwv/jirka/app/model"
 	"fmt"
 	"strings"
 	"testing"
@@ -41,10 +41,6 @@ func newTestRoot(width, height int) *RootModel {
 	m.recalcLayout()
 	m.updateDetail()
 	return m
-}
-
-func (m *RootModel) SetTestTicketForDetail(t *model.Ticket) {
-	m.detail.SetTicket(t)
 }
 
 func TestLayoutLineCount(t *testing.T) {
@@ -177,7 +173,7 @@ func TestDetailBorderLineCount(t *testing.T) {
 func TestLayoutWithRealContent(t *testing.T) {
 	realTicket := model.Ticket{
 		IssueKey:     "CLPS-26587",
-		Summary:      "KingBilly: referal bonus issue",
+		Summary:      "KingBilly: referral bonus issue",
 		StatusName:   "Open",
 		Priority:     "Major",
 		IssueType:    "Problem",
@@ -191,7 +187,7 @@ func TestLayoutWithRealContent(t *testing.T) {
 
 We have an issue with referral bonus issuing.
 
-The inviter didn't receive a bonus, though both players fullfilled requirements and the bonus was supposed to
+The inviter didn't receive a bonus, though both players fulfilled requirements and the bonus was supposed to
 Inviter: [https://kingbilly.casino-backend.com/en-AU/backend/players/1684328]
 Invited player: [https://kingbilly.casino-backend.com/en-AU/backend/players/1686484]
 Kindly assist us with finding the reason of this issue and how can we fix it.

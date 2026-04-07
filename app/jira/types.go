@@ -1,7 +1,7 @@
 package jira
 
 import (
-	"buble_jira/internal/model"
+	"github.com/cnwv/jirka/app/model"
 	"strings"
 	"time"
 )

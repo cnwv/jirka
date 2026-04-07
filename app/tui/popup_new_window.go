@@ -1,9 +1,10 @@
 package tui
 
 import (
-	"buble_jira/internal/config"
 	"fmt"
 	"strings"
+
+	"github.com/cnwv/jirka/app/config"
 )
 
 type gridPreset struct {
@@ -41,7 +42,6 @@ func (p *newWindowPopup) handlePaste(s string) {
 }
 
 // handleKey returns "done" with a built WindowConfig, "back" to go to step 0, or "close".
-// Also mutates internal state.
 func (p *newWindowPopup) handleKey(key string) (action string, win config.WindowConfig) {
 	switch p.step {
 	case 0: // name input
@@ -95,20 +95,23 @@ func (p *newWindowPopup) buildWindow(rows, cols int) config.WindowConfig {
 func (p *newWindowPopup) view(totalW, totalH int) string {
 	const popupW = 52
 
-	var lines []string
-	lines = append(lines, "")
+	lines := []string{""}
 
 	switch p.step {
 	case 0:
 		limit := fmt.Sprintf("\033[38;5;239m%d/%d\033[0m", len([]rune(p.nameInput.Value)), p.nameInput.maxLen)
-		lines = append(lines, "  Name: "+p.nameInput.view(popupW-10)+" "+limit)
-		lines = append(lines, "")
-		lines = append(lines, " \033[38;5;242mEnter: next  Esc: cancel\033[0m")
+		lines = append(lines,
+			"  Name: "+p.nameInput.view(popupW-10)+" "+limit,
+			"",
+			" \033[38;5;242mEnter: next  Esc: cancel\033[0m",
+		)
 
 	case 1:
-		lines = append(lines, fmt.Sprintf("  Name: \033[1m%s\033[0m", p.nameInput.Value))
-		lines = append(lines, "")
-		lines = append(lines, "  Layout:")
+		lines = append(lines,
+			fmt.Sprintf("  Name: \033[1m%s\033[0m", p.nameInput.Value),
+			"",
+			"  Layout:",
+		)
 		for i, pr := range gridPresets {
 			cursor := "  "
 			style, reset := "", ""
@@ -124,8 +127,10 @@ func (p *newWindowPopup) view(totalW, totalH int) string {
 			}
 			lines = append(lines, fmt.Sprintf("  %s%s%d×%d  (%d %s)%s", cursor, style, pr.rows, pr.cols, count, noun, reset))
 		}
-		lines = append(lines, "")
-		lines = append(lines, " \033[38;5;242m↑↓ select  Enter: create  Esc: back\033[0m")
+		lines = append(lines,
+			"",
+			" \033[38;5;242m↑↓ select  Enter: create  Esc: back\033[0m",
+		)
 	}
 
 	lines = append(lines, "")

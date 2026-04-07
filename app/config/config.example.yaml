@@ -1,0 +1,130 @@
+# Jirka — Example Configuration
+#
+# This is a demo config with stub tickets. To connect your Jira:
+#   1. Run: jirka init
+#   2. Edit ~/.config/jirka/config.yaml — replace stubs with your JQL queries
+#
+# YAML reference:
+#   - `layout` is optional; default is rows: 3, cols: 2 (6 panels)
+#   - Total panels must equal rows × cols (max 6, e.g. 1×1, 2×2, 3×2, 2×3)
+#   - Keys 1–N focus panels; key N+1 focuses the detail view
+#   - Each panel has either `jql` (flat list) or `sections` (grouped)
+#   - Colors: red, blue, green, yellow, orange, purple, teal, cyan (or raw ANSI like 38;5;203)
+#   - `stubs` show demo tickets when no Jira is configured
+
+layout:
+  rows: 3
+  cols: 2
+
+panels:
+  - title: "To Do"
+    color: blue
+    stubs:
+      - key: "DEMO-101"
+        summary: "Add user authentication to API"
+        status: "Open"
+        priority: "High"
+        type: "Story"
+      - key: "DEMO-102"
+        summary: "Database migration for new schema"
+        status: "Open"
+        priority: "Critical"
+        type: "Task"
+      - key: "DEMO-103"
+        summary: "Fix broken pagination on search results"
+        status: "Open"
+        priority: "Major"
+        type: "Bug"
+
+  - title: "In Progress"
+    color: green
+    sections:
+      - name: BUGS
+        color: red
+        stubs:
+          - key: "DEMO-201"
+            summary: "Memory leak in background worker"
+            status: "In Progress"
+            priority: "Critical"
+            type: "Bug"
+          - key: "DEMO-202"
+            summary: "Timeout on large file uploads"
+            status: "In Progress"
+            priority: "Major"
+            type: "Bug"
+      - name: FEATURES
+        color: green
+        stubs:
+          - key: "DEMO-203"
+            summary: "Implement webhook notifications"
+            status: "In Progress"
+            priority: "Medium"
+            type: "Story"
+
+  - title: "Code Review"
+    color: yellow
+    stubs:
+      - key: "DEMO-301"
+        summary: "Refactor payment processing module"
+        status: "In Review"
+        priority: "High"
+        type: "Task"
+      - key: "DEMO-302"
+        summary: "Add rate limiting to public API"
+        status: "In Review"
+        priority: "Major"
+        type: "Story"
+
+  - title: "Blocked"
+    color: orange
+    stubs:
+      - key: "DEMO-401"
+        summary: "Waiting for third-party API credentials"
+        status: "Blocked"
+        priority: "High"
+        type: "Task"
+      - key: "DEMO-402"
+        summary: "Infrastructure upgrade pending approval"
+        status: "Blocked"
+        priority: "Critical"
+        type: "Task"
+
+  - title: "QA"
+    color: purple
+    sections:
+      - name: READY
+        color: blue
+        stubs:
+          - key: "DEMO-501"
+            summary: "Test new search filters"
+            status: "Ready for QA"
+            priority: "Medium"
+            type: "Story"
+      - name: TESTING
+        color: yellow
+        stubs:
+          - key: "DEMO-502"
+            summary: "Regression test for checkout flow"
+            status: "Testing"
+            priority: "High"
+            type: "Bug"
+
+  - title: "Done"
+    color: teal
+    sections:
+      - name: THIS WEEK
+        color: green
+        stubs:
+          - key: "DEMO-601"
+            summary: "Fix CSV export encoding"
+            status: "Done"
+            priority: "Medium"
+            type: "Bug"
+          - key: "DEMO-602"
+            summary: "Update dependencies to latest versions"
+            status: "Done"
+            priority: "Low"
+            type: "Task"
+      - name: DEPLOYED
+        color: cyan
+        # no stubs — shows EMPTY

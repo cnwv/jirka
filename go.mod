@@ -1,4 +1,4 @@
-module buble_jira
+module github.com/cnwv/jirka
 
 go 1.26.1
 

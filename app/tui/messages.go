@@ -1,7 +1,7 @@
 package tui
 
 import (
-	"buble_jira/internal/model"
+	"github.com/cnwv/jirka/app/model"
 	"time"
 )
 

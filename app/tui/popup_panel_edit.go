@@ -1,9 +1,10 @@
 package tui
 
 import (
-	"buble_jira/internal/config"
 	"fmt"
 	"strings"
+
+	"github.com/cnwv/jirka/app/config"
 )
 
 type panelEditPopup struct {
@@ -114,22 +115,27 @@ func (p *panelEditPopup) currentJQL() string {
 	return strings.TrimSpace(p.jqlInput.Value)
 }
 
+const (
+	focusActive  = "\033[38;5;75m"
+	focusInactive = "\033[38;5;245m"
+	ansiReset     = "\033[0m"
+)
+
+func (p *panelEditPopup) focusColor(i int) string {
+	if p.focusField == i {
+		return focusActive
+	}
+	return focusInactive
+}
+
 func (p *panelEditPopup) view(totalW, totalH int) string {
 	const popupW = 62
 	inner := popupW - 4
 
-	var lines []string
-	lines = append(lines, "")
-
-	focusColor := func(i int) (pre, post string) {
-		if p.focusField == i {
-			return "\033[38;5;75m", "\033[0m"
-		}
-		return "\033[38;5;245m", "\033[0m"
-	}
+	lines := []string{""}
 
 	// Name field
-	pre, post := focusColor(0)
+	pre := p.focusColor(0)
 	var nameContent string
 	if p.focusField == 0 {
 		nameContent = p.nameInput.view(inner - 8)
@@ -137,11 +143,13 @@ func (p *panelEditPopup) view(totalW, totalH int) string {
 		nameContent = p.nameInput.viewReadonly(inner - 8)
 	}
 	limit := fmt.Sprintf("\033[38;5;239m%d/%d\033[0m", len([]rune(p.nameInput.Value)), p.nameInput.maxLen)
-	lines = append(lines, fmt.Sprintf("  %sName:%s  %s %s", pre, post, nameContent, limit))
-	lines = append(lines, "")
+	lines = append(lines,
+		fmt.Sprintf("  %sName:%s  %s %s", pre, ansiReset, nameContent, limit),
+		"",
+	)
 
 	// JQL field
-	pre, post = focusColor(1)
+	pre = p.focusColor(1)
 	jqlW := inner - 8
 	var jqlContent string
 	if p.focusField == 1 {
@@ -149,7 +157,7 @@ func (p *panelEditPopup) view(totalW, totalH int) string {
 	} else {
 		jqlContent = p.jqlInput.viewReadonly(jqlW)
 	}
-	lines = append(lines, fmt.Sprintf("  %sJQL:%s   %s", pre, post, jqlContent))
+	lines = append(lines, fmt.Sprintf("  %sJQL:%s   %s", pre, ansiReset, jqlContent))
 
 	// Test status line
 	if p.testStatus != "" {
@@ -160,15 +168,16 @@ func (p *panelEditPopup) view(totalW, totalH int) string {
 	lines = append(lines, "")
 
 	// Color selector
-	pre, post = focusColor(2)
+	pre = p.focusColor(2)
 	colorName := config.ColorNames[p.colorIdx]
 	ansiCode := config.ResolveColorPublic(colorName)
 	colorSwatch := fmt.Sprintf("\033[%sm●\033[0m %s", ansiCode, colorName)
-	lines = append(lines, fmt.Sprintf("  %sColor:%s \033[38;5;242m◄\033[0m %s \033[38;5;242m►\033[0m", pre, post, colorSwatch))
-	lines = append(lines, "")
-
-	lines = append(lines, " \033[38;5;242mTab: next  Enter: next/test  Ctrl+S: save  Esc: cancel\033[0m")
-	lines = append(lines, "")
+	lines = append(lines,
+		fmt.Sprintf("  %sColor:%s \033[38;5;242m◄\033[0m %s \033[38;5;242m►\033[0m", pre, ansiReset, colorSwatch),
+		"",
+		" \033[38;5;242mTab: next  Enter: next/test  Ctrl+S: save  Esc: cancel\033[0m",
+		"",
+	)
 
 	box := popupBox(fmt.Sprintf("Edit Panel %d", p.panelIdx+1), lines, popupW)
 	return overlayCenter(strings.Repeat("\n", totalH), box, totalW, totalH)

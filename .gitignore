@@ -2,3 +2,7 @@
 config.yaml
 tracker.db
 _bubbletea_examples/
+/jirka
+.bin/
+dist/
+coverage.out

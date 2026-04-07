@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -105,7 +106,7 @@ func resolveColor(name string) string {
 }
 
 func LoadDashboard(path string) (*DashboardConfig, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) //nolint:gosec // path is from env or hardcoded default
 	if err != nil {
 		return nil, fmt.Errorf("read config: %w", err)
 	}
@@ -118,7 +119,7 @@ func LoadDashboard(path string) (*DashboardConfig, error) {
 	// Normalize legacy format → multi-window
 	if len(dc.Windows) == 0 {
 		if len(dc.Panels) == 0 {
-			return nil, fmt.Errorf("config must define either 'windows' or 'panels'")
+			return nil, errors.New("config must define either 'windows' or 'panels'")
 		}
 		dc.Windows = []WindowConfig{{
 			Name:   "Main",
@@ -161,5 +162,5 @@ func SaveConfig(path string, windows []WindowConfig) error {
 	if err != nil {
 		return fmt.Errorf("marshal config: %w", err)
 	}
-	return os.WriteFile(path, data, 0644)
+	return os.WriteFile(path, data, 0o600)
 }

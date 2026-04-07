@@ -1,7 +1,7 @@
 package tui
 
 import (
-	"buble_jira/internal/model"
+	"github.com/cnwv/jirka/app/model"
 	"fmt"
 	"strings"
 
@@ -158,102 +158,36 @@ func (p *PanelModel) visibleLines() int {
 }
 
 func (p *PanelModel) View() string {
-	innerWidth := p.Width - 2
-	if innerWidth < 1 {
-		innerWidth = 1
-	}
+	innerWidth := max(p.Width-2, 1)
 	vis := p.visibleLines()
 
 	items, _ := p.buildDisplayItems()
 
-	var sb strings.Builder
-	sb.Grow(vis * (innerWidth + 10))
+	end := min(p.ScrollOffset+vis, len(items))
+	maxSummaryW := max(innerWidth-20, 5)
 
-	end := p.ScrollOffset + vis
-	if end > len(items) {
-		end = len(items)
-	}
-
-	maxSummaryW := innerWidth - 20
-	if maxSummaryW < 5 {
-		maxSummaryW = 5
-	}
-
-	linesWritten := 0
+	contentLines := make([]string, 0, vis)
 	for i := p.ScrollOffset; i < end; i++ {
-		if linesWritten > 0 {
-			sb.WriteByte('\n')
-		}
 		item := items[i]
 		switch {
 		case item.isHeader:
-			sb.WriteString(fmt.Sprintf(" %s", item.header))
+			contentLines = append(contentLines, " "+item.header)
 		case item.isEmpty:
-			sb.WriteString("   \033[38;5;242mEMPTY\033[0m")
+			contentLines = append(contentLines, "   \033[38;5;242mEMPTY\033[0m")
 		default:
 			t := item.ticket
 			pIcon := priorityIcon(t.Priority)
 			summary := truncate(t.Summary, maxSummaryW)
 			if item.ticketIdx == p.Cursor && p.Focused {
-				sb.WriteString(fmt.Sprintf(" \033[36m▸\033[0m %s \033[1;37m%s\033[0m \033[38;5;245m%s\033[0m", pIcon, t.IssueKey, summary))
+				contentLines = append(contentLines, fmt.Sprintf(" \033[36m▸\033[0m %s \033[1;37m%s\033[0m \033[38;5;245m%s\033[0m", pIcon, t.IssueKey, summary))
 			} else {
-				sb.WriteString(fmt.Sprintf("   %s \033[38;5;252m%s\033[0m \033[38;5;242m%s\033[0m", pIcon, t.IssueKey, summary))
+				contentLines = append(contentLines, fmt.Sprintf("   %s \033[38;5;252m%s\033[0m \033[38;5;242m%s\033[0m", pIcon, t.IssueKey, summary))
 			}
 		}
-		linesWritten++
 	}
 
-	// Pad to fill height
-	for linesWritten < vis {
-		sb.WriteByte('\n')
-		linesWritten++
-	}
-
-	// Build border
-	borderColor := "38;5;240"
-	if p.Focused {
-		borderColor = "38;5;245"
-	}
-
-	titleText := fmt.Sprintf("%d:%s", p.Number, p.Title)
-	titleRendered := fmt.Sprintf("\033[1;%sm%s\033[0m", p.TitleColor, titleText)
-
-	var out strings.Builder
-	out.Grow(sb.Len() + 300)
-
-	// Top border
-	out.WriteString(fmt.Sprintf("\033[%sm╭─\033[0m %s \033[%sm", borderColor, titleRendered, borderColor))
-	topUsed := 1 + 1 + len(titleText) + 1
-	for topUsed < innerWidth {
-		out.WriteString("─")
-		topUsed++
-	}
-	out.WriteString("╮\033[0m\n")
-
-	// Content lines
-	content := sb.String()
-	for _, line := range strings.Split(content, "\n") {
-		out.WriteString(fmt.Sprintf("\033[%sm│\033[0m", borderColor))
-		lineW := visibleWidth(line)
-		if lineW > innerWidth {
-			out.WriteString(truncateAnsi(line, innerWidth))
-		} else {
-			out.WriteString(line)
-			for i := lineW; i < innerWidth; i++ {
-				out.WriteByte(' ')
-			}
-		}
-		out.WriteString(fmt.Sprintf("\033[%sm│\033[0m\n", borderColor))
-	}
-
-	// Bottom border
-	out.WriteString(fmt.Sprintf("\033[%sm╰", borderColor))
-	for i := 0; i < innerWidth; i++ {
-		out.WriteString("─")
-	}
-	out.WriteString("╯\033[0m")
-
-	return out.String()
+	title := fmt.Sprintf("%d:%s", p.Number, p.Title)
+	return borderedBox(title, p.TitleColor, contentLines, p.Width, p.Height, p.Focused)
 }
 
 func priorityIcon(priority string) string {
