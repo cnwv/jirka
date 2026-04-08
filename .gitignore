@@ -6,3 +6,4 @@ _bubbletea_examples/
 .bin/
 dist/
 coverage.out
+.wrangler/
