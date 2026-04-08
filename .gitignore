@@ -7,3 +7,7 @@ _bubbletea_examples/
 dist/
 coverage.out
 .wrangler/
+
+.dev.vars*
+!.dev.vars.example
+!.env.example
