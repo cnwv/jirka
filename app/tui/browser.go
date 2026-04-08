@@ -66,5 +66,7 @@ func (m *RootModel) dispatchPaste(content string) {
 		p.handlePaste(content)
 	case *newWindowPopup:
 		p.handlePaste(content)
+	case *sectionEditPopup:
+		p.handlePaste(content)
 	}
 }

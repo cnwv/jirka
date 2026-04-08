@@ -175,10 +175,16 @@ func (m *RootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case jqlTestResultMsg:
-		if p, ok := m.popup.(*panelEditPopup); ok {
+		switch p := m.popup.(type) {
+		case *panelEditPopup:
 			p.setTestResult(msg.ok, msg.summary)
 			if msg.ok {
 				p.focusField = 2 // advance to color on success
+			}
+		case *sectionEditPopup:
+			p.setTestResult(msg.ok, msg.summary)
+			if msg.ok {
+				p.focusField = 2
 			}
 		}
 		return m, nil
@@ -315,6 +321,8 @@ func (m *RootModel) handlePopupKey(key string) (tea.Model, tea.Cmd) {
 		return m.handleNewWindowKey(p, key)
 	case *panelEditPopup:
 		return m.handlePanelEditKey(p, key)
+	case *sectionEditPopup:
+		return m.handleSectionEditKey(p, key)
 	}
 
 	return m, nil
@@ -373,14 +381,40 @@ func (m *RootModel) handlePanelEditKey(p *panelEditPopup, key string) (tea.Model
 	case "save":
 		m.popup = nil
 		m.updatePanel(p.panelIdx, pc)
-		if !m.isExample && pc.JQL != "" {
+		if !m.isExample && (pc.JQL != "" || len(pc.Sections) > 0) {
 			return m, tea.Batch(
 				doFetch(m.jiraClient, m.sub, m.windows[m.activeWin]),
 				waitForTickets(m.sub),
 			)
 		}
+	case "edit_section":
+		sec := p.sections[p.sectionCursor]
+		m.popup = newSectionEditPopup(p.panelIdx, p.sectionCursor, sec)
+	case "add_section":
+		m.popup = newSectionEditPopup(p.panelIdx, -1, config.SectionConfig{})
 	case "close":
 		m.popup = nil
+	}
+	return m, nil
+}
+
+func (m *RootModel) handleSectionEditKey(p *sectionEditPopup, key string) (tea.Model, tea.Cmd) {
+	action, sec := p.handleKey(key)
+	switch action {
+	case "test_jql":
+		return m, testJQL(m.jiraClient, p.currentJQL())
+	case "save":
+		// Update section in the panel config, then reopen panel edit
+		pc := &m.windows[m.activeWin].Panels[p.panelIdx]
+		if p.sectionIdx >= 0 {
+			pc.Sections[p.sectionIdx] = sec
+		} else {
+			pc.Sections = append(pc.Sections, sec)
+		}
+		m.popup = newPanelEditPopup(p.panelIdx, *pc)
+	case "close":
+		pc := m.windows[m.activeWin].Panels[p.panelIdx]
+		m.popup = newPanelEditPopup(p.panelIdx, pc)
 	}
 	return m, nil
 }
@@ -538,6 +572,8 @@ func (m *RootModel) renderPopup(content string) string {
 	case *newWindowPopup:
 		return p.view(m.width, m.height)
 	case *panelEditPopup:
+		return p.view(m.width, m.height)
+	case *sectionEditPopup:
 		return p.view(m.width, m.height)
 	}
 	return content
