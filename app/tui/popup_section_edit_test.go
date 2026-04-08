@@ -32,7 +32,7 @@ func TestSectionEditPopup_NewSection(t *testing.T) {
 func TestSectionEditPopup_EscCloses(t *testing.T) {
 	p := newSectionEditPopup(0, 0, config.SectionConfig{Name: "X"})
 	action, _ := p.handleKey("esc")
-	if action != "close" {
+	if action != actionClose {
 		t.Errorf("action = %q, want close", action)
 	}
 }
@@ -40,7 +40,7 @@ func TestSectionEditPopup_EscCloses(t *testing.T) {
 func TestSectionEditPopup_CtrlSSaves(t *testing.T) {
 	p := newSectionEditPopup(0, 0, config.SectionConfig{Name: "X", JQL: "q"})
 	action, sec := p.handleKey("ctrl+s")
-	if action != "save" {
+	if action != actionSave {
 		t.Errorf("action = %q, want save", action)
 	}
 	if sec.Name != "X" {
@@ -79,7 +79,7 @@ func TestSectionEditPopup_TestJQL(t *testing.T) {
 	p := newSectionEditPopup(0, 0, config.SectionConfig{JQL: "project = X"})
 	p.focusField = 1
 	action, _ := p.handleKey("enter")
-	if action != "test_jql" {
+	if action != actionTestJQL {
 		t.Errorf("action = %q, want test_jql", action)
 	}
 }

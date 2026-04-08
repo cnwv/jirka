@@ -16,7 +16,7 @@ func newWinSwitcherPopup(names []string, active int) *winSwitcherPopup {
 }
 
 // handleKey returns (action, data).
-// action: "switch"→selected idx, "delete"→selected idx, "new"→open new window, "close"→nil
+// action: actionSwitch→selected idx, actionDelete→selected idx, actionNew→open new window, actionClose→nil
 func (p *winSwitcherPopup) handleKey(key string) (action string, idx int) {
 	switch key {
 	case "up", "k":
@@ -28,13 +28,13 @@ func (p *winSwitcherPopup) handleKey(key string) (action string, idx int) {
 			p.selected++
 		}
 	case "enter":
-		return "switch", p.selected
+		return actionSwitch, p.selected
 	case "n":
-		return "new", 0
+		return actionNew, 0
 	case "d", "backspace":
-		return "delete", p.selected
+		return actionDelete, p.selected
 	case "esc", "0":
-		return "close", 0
+		return actionClose, 0
 	}
 	return "", 0
 }

@@ -51,7 +51,7 @@ func TestPanelEditPopup_PreservesSections(t *testing.T) {
 func TestPanelEditPopup_EscCloses(t *testing.T) {
 	p := newPanelEditPopup(0, config.PanelConfig{Title: "X"})
 	action, _ := p.handleKey("esc")
-	if action != "close" {
+	if action != actionClose {
 		t.Errorf("action = %q, want close", action)
 	}
 }
@@ -59,7 +59,7 @@ func TestPanelEditPopup_EscCloses(t *testing.T) {
 func TestPanelEditPopup_CtrlSSaves(t *testing.T) {
 	p := newPanelEditPopup(0, config.PanelConfig{Title: "X", JQL: "q"})
 	action, pc := p.handleKey("ctrl+s")
-	if action != "save" {
+	if action != actionSave {
 		t.Errorf("action = %q, want save", action)
 	}
 	if pc.Title != "X" {
@@ -90,7 +90,7 @@ func TestPanelEditPopup_TestJQL(t *testing.T) {
 	p := newPanelEditPopup(0, config.PanelConfig{JQL: "project = X"})
 	p.focusField = 1
 	action, _ := p.handleKey("enter")
-	if action != "test_jql" {
+	if action != actionTestJQL {
 		t.Errorf("action = %q, want test_jql", action)
 	}
 }
@@ -121,7 +121,7 @@ func TestPanelEditPopup_AddSectionOpensPopup(t *testing.T) {
 	p := newPanelEditPopup(0, config.PanelConfig{})
 	p.focusField = 2
 	action, _ := p.handleKey("a")
-	if action != "add_section" {
+	if action != actionAddSection {
 		t.Errorf("action = %q, want add_section", action)
 	}
 }
@@ -135,7 +135,7 @@ func TestPanelEditPopup_EditSectionOpensPopup(t *testing.T) {
 	p.sectionCursor = 0
 
 	action, _ := p.handleKey("enter")
-	if action != "edit_section" {
+	if action != actionEditSection {
 		t.Errorf("action = %q, want edit_section", action)
 	}
 }
