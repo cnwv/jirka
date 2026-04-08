@@ -57,20 +57,51 @@ func Run() error {
 		}
 	}
 
+	// Ask for Jira type
+	fmt.Println("Jira type:")
+	fmt.Println("  [1] Jira Cloud (*.atlassian.net)")
+	fmt.Println("  [2] Jira Server / Data Center")
+	fmt.Print("Choose [1/2]: ")
+	choice, _ := reader.ReadString('\n')
+	choice = strings.TrimSpace(choice)
+
+	isCloud := choice == "1"
+
 	// Ask for Jira URL
-	fmt.Print("Jira URL (e.g. https://jira.company.com): ")
+	if isCloud {
+		fmt.Print("Jira URL (e.g. https://mycompany.atlassian.net): ")
+	} else {
+		fmt.Print("Jira URL (e.g. https://jira.company.com): ")
+	}
 	jiraURL, _ := reader.ReadString('\n')
 	jiraURL = strings.TrimSpace(jiraURL)
 	if jiraURL == "" {
 		return errors.New("jira URL is required")
 	}
 
-	// Ask for token
-	fmt.Print("Bearer token: ")
-	token, _ := reader.ReadString('\n')
-	token = strings.TrimSpace(token)
-	if token == "" {
-		return errors.New("bearer token is required")
+	var email, token string
+
+	if isCloud {
+		fmt.Print("Email: ")
+		email, _ = reader.ReadString('\n')
+		email = strings.TrimSpace(email)
+		if email == "" {
+			return errors.New("email is required for Jira Cloud")
+		}
+
+		fmt.Print("API token (https://id.atlassian.net/manage-profile/security/api-tokens): ")
+		token, _ = reader.ReadString('\n')
+		token = strings.TrimSpace(token)
+		if token == "" {
+			return errors.New("API token is required")
+		}
+	} else {
+		fmt.Print("Personal access token: ")
+		token, _ = reader.ReadString('\n')
+		token = strings.TrimSpace(token)
+		if token == "" {
+			return errors.New("token is required")
+		}
 	}
 
 	// Create config directory
@@ -79,7 +110,12 @@ func Run() error {
 	}
 
 	// Write .env
-	envContent := fmt.Sprintf("JIRA_URL=%s\nJIRA_TOKEN=%s\n", jiraURL, token)
+	var envContent string
+	if isCloud {
+		envContent = fmt.Sprintf("JIRA_URL=%s\nJIRA_AUTH_TYPE=basic\nJIRA_EMAIL=%s\nJIRA_TOKEN=%s\n", jiraURL, email, token)
+	} else {
+		envContent = fmt.Sprintf("JIRA_URL=%s\nJIRA_AUTH_TYPE=bearer\nJIRA_TOKEN=%s\n", jiraURL, token)
+	}
 	if err := os.WriteFile(envPath, []byte(envContent), 0o600); err != nil {
 		return fmt.Errorf("write .env: %w", err)
 	}

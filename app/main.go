@@ -47,7 +47,12 @@ func main() {
 
 	var client *jira.Client
 	if cfg.JiraToken != "" {
-		client = jira.NewClient(cfg.JiraURL, cfg.JiraToken)
+		switch cfg.JiraAuthType {
+		case "basic":
+			client = jira.NewClientBasic(cfg.JiraURL, cfg.JiraEmail, cfg.JiraToken)
+		default:
+			client = jira.NewClient(cfg.JiraURL, cfg.JiraToken)
+		}
 	}
 
 	root := tui.NewRootModel(client, cfg.PollInterval, cfg.JiraURL, cfg.Dashboard)
@@ -69,8 +74,14 @@ Usage:
   jirka -h           Show this help
 
 Config files:
-  ~/.config/jirka/.env          JIRA_URL and JIRA_TOKEN
+  ~/.config/jirka/.env          JIRA_URL, JIRA_TOKEN, JIRA_AUTH_TYPE, JIRA_EMAIL
   ~/.config/jirka/config.yaml   Dashboard layout and JQL queries
+
+Environment variables:
+  JIRA_URL         Jira instance URL
+  JIRA_TOKEN       API token or personal access token
+  JIRA_AUTH_TYPE   "bearer" (default, Server/DC) or "basic" (Cloud)
+  JIRA_EMAIL       Email for basic auth (Jira Cloud)
 
 Keyboard shortcuts:
   1-N         Focus panel N

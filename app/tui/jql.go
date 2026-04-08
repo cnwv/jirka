@@ -57,6 +57,9 @@ func testJQL(client *jira.Client, jql string) tea.Cmd {
 		if err != nil {
 			return jqlTestResultMsg{ok: false, summary: compactErr(err)}
 		}
+		if total < 0 {
+			return jqlTestResultMsg{ok: true, summary: "valid JQL"}
+		}
 		noun := "tickets"
 		if total == 1 {
 			noun = "ticket"

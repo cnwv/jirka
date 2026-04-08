@@ -22,6 +22,8 @@ func ConfigDir() string {
 type Config struct {
 	JiraURL      string
 	JiraToken    string
+	JiraAuthType string // "bearer" (default) or "basic"
+	JiraEmail    string // required for basic auth (Jira Cloud)
 	PollInterval time.Duration
 	Dashboard    *DashboardConfig
 }
@@ -37,9 +39,16 @@ func Load() (Config, error) {
 	}
 	_ = godotenv.Load() // local .env (overrides if set)
 
+	authType := os.Getenv("JIRA_AUTH_TYPE")
+	if authType == "" {
+		authType = "bearer"
+	}
+
 	cfg := Config{
 		JiraURL:      os.Getenv("JIRA_URL"),
 		JiraToken:    os.Getenv("JIRA_TOKEN"),
+		JiraAuthType: authType,
+		JiraEmail:    os.Getenv("JIRA_EMAIL"),
 		PollInterval: 5 * time.Minute,
 	}
 

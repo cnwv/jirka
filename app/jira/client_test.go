@@ -2,6 +2,7 @@ package jira
 
 import (
 	"context"
+	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -84,6 +85,25 @@ func TestSearchJQL_BearerToken(t *testing.T) {
 	_, _ = client.SearchJQL(context.Background(), "project = TEST")
 
 	expected := "Bearer my-secret-token"
+	if gotAuth != expected {
+		t.Errorf("expected Authorization %q, got %q", expected, gotAuth)
+	}
+}
+
+func TestSearchJQL_BasicAuth(t *testing.T) {
+	var gotAuth string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotAuth = r.Header.Get("Authorization")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"total": 0, "issues": []}`))
+	}))
+	defer srv.Close()
+
+	client := NewClientBasic(srv.URL, "user@example.com", "api-token-123")
+	_, _ = client.SearchJQL(context.Background(), "project = TEST")
+
+	expectedCreds := base64.StdEncoding.EncodeToString([]byte("user@example.com:api-token-123"))
+	expected := "Basic " + expectedCreds
 	if gotAuth != expected {
 		t.Errorf("expected Authorization %q, got %q", expected, gotAuth)
 	}

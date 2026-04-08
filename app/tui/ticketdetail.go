@@ -58,15 +58,18 @@ func (d *TicketDetailModel) buildLines() {
 	t := d.Ticket
 	var lines []string
 
-	// Issue key + summary, wrap if needed
 	wrapW := max(d.Width-2, 10)
-	titlePlain := t.IssueKey + " " + t.Summary
+
+	// Title: KEY — Summary
+	titlePlain := t.IssueKey + " \u2014 " + t.Summary
 	titleWrapped := wrapLine(titlePlain, wrapW)
+	keyLen := len(t.IssueKey)
+	dashPrefix := " \u2014 "
 	for i, wl := range titleWrapped {
 		if i == 0 {
-			// First line: key in orange, rest in white
-			if len(wl) > len(t.IssueKey) {
-				lines = append(lines, fmt.Sprintf("\033[1;38;5;209m%s\033[0m\033[1;37m%s\033[0m", t.IssueKey, wl[len(t.IssueKey):]))
+			if len(wl) > keyLen+len(dashPrefix) {
+				lines = append(lines, fmt.Sprintf("\033[1;38;5;209m%s\033[0;38;5;242m%s\033[0m\033[1;37m%s\033[0m",
+					t.IssueKey, dashPrefix, wl[keyLen+len(dashPrefix):]))
 			} else {
 				lines = append(lines, fmt.Sprintf("\033[1;38;5;209m%s\033[0m", wl))
 			}
@@ -74,39 +77,60 @@ func (d *TicketDetailModel) buildLines() {
 			lines = append(lines, fmt.Sprintf("\033[1;37m%s\033[0m", wl))
 		}
 	}
-	lines = append(lines,
-		"",
-		"\033[38;5;222mStatus:\033[0m "+t.StatusName,
-		"\033[38;5;222mPriority:\033[0m "+t.Priority,
-		"\033[38;5;222mType:\033[0m "+t.IssueType,
-	)
-	if t.Components != "" {
-		lines = append(lines, "\033[38;5;222mComponents:\033[0m "+t.Components)
-	}
+	lines = append(lines, "")
 
+	// Fields — aligned key-value pairs
 	assignee := t.AssigneeName
 	if !t.IsAssigned {
 		assignee = "Unassigned"
 	}
-	lines = append(lines,
-		"\033[38;5;222mAssignee:\033[0m "+assignee,
-		"\033[38;5;222mReporter:\033[0m "+t.ReporterName,
-		"\033[38;5;222mCreated:\033[0m "+t.Created.Format("2006-01-02 15:04"),
-		"",
-	)
 
+	fields := [][2]string{
+		{"Status", t.StatusName},
+		{"Priority", t.Priority},
+		{"Type", t.IssueType},
+		{"Assignee", assignee},
+		{"Reporter", t.ReporterName},
+		{"Created", t.Created.Format("2006-01-02 15:04")},
+	}
+	if t.Components != "" {
+		fields = append(fields, [2]string{"Components", t.Components})
+	}
+
+	// Find max label width for alignment
+	labelW := 0
+	for _, f := range fields {
+		if len(f[0]) > labelW {
+			labelW = len(f[0])
+		}
+	}
+
+	for _, f := range fields {
+		padding := strings.Repeat(" ", labelW-len(f[0]))
+		lines = append(lines, fmt.Sprintf("\033[38;5;110m%s%s\033[0m  \033[38;5;255m%s\033[0m", f[0], padding, f[1]))
+	}
+
+	// Separator line
+	lines = append(lines, "")
+	sepW := wrapW
+	lines = append(lines, "\033[38;5;238m"+strings.Repeat("\u2500", sepW)+"\033[0m")
+	lines = append(lines, "")
+
+	// Description
 	if t.Description != "" {
-		lines = append(lines, "\033[38;5;222mDescription:\033[0m")
+		lines = append(lines, "\033[1;37mDescription\033[0m")
+		lines = append(lines, "")
 		desc := strings.ReplaceAll(t.Description, "\r", "")
 		desc = formatJiraMarkup(desc)
 		descLines := strings.Split(desc, "\n")
-		wrapW := max(d.Width-2, 10) // inner width (minus border chars)
 		for _, dl := range descLines {
 			wrapped := wrapLine(dl, wrapW)
 			for _, wl := range wrapped {
 				lines = append(lines, fmt.Sprintf("\033[38;5;252m%s\033[0m", wl))
 			}
 		}
+	} else {
+		lines = append(lines, "\033[38;5;242mNo description\033[0m")
 	}
 
 	d.lines = lines

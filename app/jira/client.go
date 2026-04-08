@@ -3,6 +3,7 @@ package jira
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,8 +11,9 @@ import (
 )
 
 const (
-	searchPath     = "/rest/api/2/search"
-	maxResults     = 50
+	searchPathV2    = "/rest/api/2/search"
+	searchPathV3    = "/rest/api/3/search/jql"
+	maxResults      = 50
 	contentTypeJSON = "application/json"
 )
 
@@ -20,24 +22,53 @@ var requestedFields = []string{
 	"created", "updated", "issuetype", "reporter", "description", "comment",
 }
 
-// Client is a Jira REST API client that uses Bearer token authentication.
+// Client is a Jira REST API client that supports Bearer and Basic authentication.
 type Client struct {
 	BaseURL    string
 	Token      string
+	Email      string
+	AuthType   string // "bearer" or "basic"
 	HTTPClient *http.Client
 }
 
-// NewClient creates a new Jira client with the given base URL and bearer token.
+// NewClient creates a new Jira client with Bearer token authentication (Server/Data Center).
 func NewClient(baseURL, token string) *Client {
 	return &Client{
 		BaseURL:    baseURL,
 		Token:      token,
+		AuthType:   "bearer",
 		HTTPClient: &http.Client{},
 	}
 }
 
-// CountJQL executes a JQL query with maxResults=0 to validate and get the total count.
+// NewClientBasic creates a new Jira client with Basic authentication (Cloud).
+func NewClientBasic(baseURL, email, token string) *Client {
+	return &Client{
+		BaseURL:    baseURL,
+		Token:      token,
+		Email:      email,
+		AuthType:   "basic",
+		HTTPClient: &http.Client{},
+	}
+}
+
+// CountJQL executes a JQL query to validate and get the total count.
+// For Cloud (v3 API), returns -1 on success since the total count is unavailable.
 func (c *Client) CountJQL(ctx context.Context, jql string) (int, error) {
+	if c.isCloud() {
+		// v3 API requires maxResults >= 1 and doesn't return total
+		body := map[string]any{
+			"jql":        jql,
+			"fields":     []string{"summary"},
+			"maxResults": 1,
+		}
+		_, err := c.doSearch(ctx, body)
+		if err != nil {
+			return 0, err
+		}
+		return -1, nil
+	}
+
 	body := map[string]any{
 		"jql":        jql,
 		"fields":     []string{},
@@ -59,13 +90,20 @@ func (c *Client) CountJQL(ctx context.Context, jql string) (int, error) {
 	return result.Total, nil
 }
 
+// isCloud returns true if the client uses Cloud (basic auth / v3 API).
+func (c *Client) isCloud() bool {
+	return c.AuthType == "basic"
+}
+
 // SearchJQL fetches up to maxResults tickets matching the JQL query.
 func (c *Client) SearchJQL(ctx context.Context, jql string) ([]Issue, error) {
 	body := map[string]any{
 		"jql":        jql,
 		"fields":     requestedFields,
-		"startAt":    0,
 		"maxResults": maxResults,
+	}
+	if !c.isCloud() {
+		body["startAt"] = 0
 	}
 
 	respBody, err := c.doSearch(ctx, body)
@@ -87,13 +125,24 @@ func (c *Client) doSearch(ctx context.Context, body map[string]any) ([]byte, err
 		return nil, fmt.Errorf("marshal request: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.BaseURL+searchPath, bytes.NewReader(jsonBody))
+	searchURL := c.BaseURL + searchPathV2
+	if c.isCloud() {
+		searchURL = c.BaseURL + searchPathV3
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, searchURL, bytes.NewReader(jsonBody))
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", contentTypeJSON)
-	req.Header.Set("Authorization", "Bearer "+c.Token)
+	switch c.AuthType {
+	case "basic":
+		creds := base64.StdEncoding.EncodeToString([]byte(c.Email + ":" + c.Token))
+		req.Header.Set("Authorization", "Basic "+creds)
+	default:
+		req.Header.Set("Authorization", "Bearer "+c.Token)
+	}
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {

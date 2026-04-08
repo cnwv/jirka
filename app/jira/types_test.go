@@ -1,6 +1,7 @@
 package jira
 
 import (
+	"encoding/json"
 	"testing"
 )
 
@@ -19,7 +20,7 @@ func TestToTickets(t *testing.T) {
 					{Name: "Backend"},
 					{Name: "API"},
 				},
-				Description: "Some description",
+				RawDescription: json.RawMessage(`"Some description"`),
 				Created:     "2026-03-15T10:30:00.000+0000",
 				Updated:     "2026-03-16T14:00:00.000+0000",
 			},
