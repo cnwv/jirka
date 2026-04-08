@@ -4,6 +4,8 @@ TUI dashboard for Jira tickets. Multi-panel grid layout with configurable JQL qu
 
 Built for teams that live in the terminal and want a quick overview of their Jira boards without switching to a browser.
 
+Supports **Jira Cloud** (Basic Auth + API v3) and **Jira Server / Data Center** (Bearer token + API v2).
+
 ## Features
 
 - **Multi-panel grid** — up to 6 panels arranged in a configurable rows × cols layout
@@ -62,12 +64,25 @@ jirka -h           Show help
 
 ### Credentials
 
-Stored in `~/.config/jirka/.env`:
+Stored in `~/.config/jirka/.env`.
+
+**Jira Server / Data Center** (Bearer token):
 
 ```
 JIRA_URL=https://jira.company.com
 JIRA_TOKEN=your_bearer_token
 ```
+
+**Jira Cloud** (Basic Auth):
+
+```
+JIRA_URL=https://company.atlassian.net
+JIRA_AUTH_TYPE=basic
+JIRA_EMAIL=you@company.com
+JIRA_TOKEN=your_api_token
+```
+
+Generate a Jira Cloud API token at [id.atlassian.com/manage-profile/security/api-tokens](https://id.atlassian.com/manage-profile/security/api-tokens).
 
 ### Dashboard Layout
 
@@ -169,7 +184,10 @@ windows:
 
 ## How It Works
 
-jirka polls the Jira REST API (`POST /rest/api/2/search`) using Bearer token authentication. Each panel's JQL query is executed sequentially with a small delay between requests to avoid rate limiting. Results are displayed in a BubbleTea v2 terminal UI with a grid of panels on the left and a ticket detail view on the right.
+jirka polls the Jira REST API using JQL queries. Each panel's query is executed sequentially with a small delay between requests to avoid rate limiting. Results are displayed in a BubbleTea v2 terminal UI with a grid of panels on the left and a ticket detail view on the right.
+
+- **Jira Server / Data Center** — `POST /rest/api/2/search`, Bearer token auth
+- **Jira Cloud** — `POST /rest/api/3/search/jql`, Basic auth (email + API token)
 
 No data is stored locally — tickets are fetched fresh on each poll cycle.
 
