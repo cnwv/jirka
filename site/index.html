@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>jirka — Terminal Dashboard for Jira</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1><span>jirka</span></h1>
+    <p class="tagline">Terminal dashboard for Jira tickets. Multi-panel layout, live polling, keyboard-driven.</p>
+
+    <div class="badges">
+      <span class="badge">Go + BubbleTea v2</span>
+      <span class="badge">Vim-style nav</span>
+      <span class="badge">Configurable JQL</span>
+      <span class="badge">Zero dependencies</span>
+    </div>
+
+    <div class="install-box" onclick="copyInstall(this)">
+      <span class="prompt">$</span>
+      <span class="cmd">brew install cnwv/apps/jirka</span>
+      <span class="copy-hint">click to copy</span>
+    </div>
+
+    <p class="install-alt">
+      or <code>go install github.com/cnwv/jirka/app@latest</code>
+      &nbsp;&middot;&nbsp;
+      <a href="https://github.com/cnwv/jirka/releases">binary releases</a>
+      &nbsp;&middot;&nbsp;
+      <a href="https://github.com/cnwv/jirka">github</a>
+    </p>
+  </section>
+
+  <!-- Demo -->
+  <section class="demo-section">
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="terminal-dot r"></div>
+        <div class="terminal-dot y"></div>
+        <div class="terminal-dot g"></div>
+        <div class="terminal-title">jirka &mdash; Main</div>
+        <div style="width: 52px;"></div>
+      </div>
+
+      <div class="terminal-body">
+        <div class="panels-grid" id="panels"></div>
+        <div class="detail-pane">
+          <div class="detail-header" id="detail-header">DEMO-102 &mdash; Database migration for new schema</div>
+          <div class="detail-body" id="detail-body"></div>
+        </div>
+      </div>
+
+      <div class="status-bar">
+        <span>Last update: just now</span>
+        <span class="keys">
+          <span><kbd>1</kbd>-<kbd>6</kbd> panels</span>
+          <span><kbd>j</kbd>/<kbd>k</kbd> navigate</span>
+          <span><kbd>Tab</kbd> cycle</span>
+          <span><kbd>r</kbd> refresh</span>
+          <span>Try the keys!</span>
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="features">
+    <h2>Features</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <span class="feature-icon">&#9638;</span>
+        <h3>Multi-panel grid</h3>
+        <p>Up to 6 panels in configurable rows x cols layout. Each panel shows tickets from any JQL query.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">&#8644;</span>
+        <h3>Multi-window</h3>
+        <p>Create multiple dashboard windows for different views. Switch between them instantly with one key.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">&#8635;</span>
+        <h3>Live polling</h3>
+        <p>Automatically refreshes data from Jira on a configurable interval. No manual refresh needed.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">&#9998;</span>
+        <h3>In-app editing</h3>
+        <p>Edit panel names, JQL queries, and colors without leaving the TUI. Test JQL live before saving.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">&#9776;</span>
+        <h3>Sectioned panels</h3>
+        <p>Group tickets within a panel by status, priority, or any criteria using multiple JQL sub-queries.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">&#9000;</span>
+        <h3>Keyboard-driven</h3>
+        <p>Vim-style navigation. Number keys to focus panels, Tab to cycle, j/k to scroll. No mouse needed.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Keybindings -->
+  <section class="keys-section">
+    <h2>Key Bindings</h2>
+    <table class="keys-table">
+      <tr><td><kbd>1</kbd> - <kbd>N</kbd></td><td>Focus panel N</td></tr>
+      <tr><td><kbd>Tab</kbd></td><td>Cycle focus between panels and detail</td></tr>
+      <tr><td><kbd>j</kbd> / <kbd>k</kbd></td><td>Navigate tickets or scroll detail view</td></tr>
+      <tr><td><kbd>e</kbd></td><td>Edit focused panel (name, JQL, color)</td></tr>
+      <tr><td><kbd>n</kbd></td><td>Create new window</td></tr>
+      <tr><td><kbd>0</kbd></td><td>Window switcher</td></tr>
+      <tr><td><kbd>r</kbd></td><td>Refresh data from Jira</td></tr>
+      <tr><td><kbd>b</kbd></td><td>Open selected ticket in browser</td></tr>
+      <tr><td><kbd>q</kbd></td><td>Quit</td></tr>
+    </table>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>
+      <a href="https://github.com/cnwv/jirka">GitHub</a>
+      &nbsp;&middot;&nbsp;
+      <a href="https://github.com/cnwv/jirka/releases">Releases</a>
+      &nbsp;&middot;&nbsp;
+      MIT License
+    </p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
