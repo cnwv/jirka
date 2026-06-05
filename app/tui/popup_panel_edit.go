@@ -37,12 +37,7 @@ func (p *panelEditPopup) hasSections() bool {
 	return len(p.sections) > 0
 }
 
-func (p *panelEditPopup) fieldCount() int {
-	if p.hasSections() {
-		return 3 // name, color, sections
-	}
-	return 3 // name, jql, color
-}
+const panelEditFieldCount = 3 // name + jql/color + color/sections
 
 func (p *panelEditPopup) setTestResult(ok bool, summary string) {
 	if ok {
@@ -57,18 +52,18 @@ func (p *panelEditPopup) setTesting() {
 }
 
 // handleKey returns action and config.
-// Actions: "save", "test_jql", "close", "edit_section", "add_section".
+// Actions: actionSave, actionTestJQL, actionClose, actionEditSection, actionAddSection.
 func (p *panelEditPopup) handleKey(key string) (action string, pc config.PanelConfig) {
 	switch key {
 	case "esc":
-		return "close", pc
+		return actionClose, pc
 	case "ctrl+s":
-		return "save", p.build()
+		return actionSave, p.build()
 	case "tab":
-		p.focusField = (p.focusField + 1) % p.fieldCount()
+		p.focusField = (p.focusField + 1) % panelEditFieldCount
 		return "", pc
 	case "shift+tab":
-		p.focusField = (p.focusField + p.fieldCount() - 1) % p.fieldCount()
+		p.focusField = (p.focusField + panelEditFieldCount - 1) % panelEditFieldCount
 		return "", pc
 	case "enter":
 		return p.handleEnter()
@@ -88,7 +83,7 @@ func (p *panelEditPopup) handleEnter() (string, config.PanelConfig) {
 			p.focusField = 2
 		case 2: // sections → edit selected section
 			if len(p.sections) > 0 {
-				return "edit_section", pc
+				return actionEditSection, pc
 			}
 		}
 	} else {
@@ -98,10 +93,34 @@ func (p *panelEditPopup) handleEnter() (string, config.PanelConfig) {
 		case 1: // jql → test
 			if strings.TrimSpace(p.jqlInput.Value) != "" {
 				p.setTesting()
-				return "test_jql", pc
+				return actionTestJQL, pc
 			}
 		case 2: // color → save
-			return "save", p.build()
+			return actionSave, p.build()
+		}
+	}
+	return "", pc
+}
+
+func (p *panelEditPopup) handleSectionListKey(key string) (string, config.PanelConfig) {
+	var pc config.PanelConfig
+	switch key {
+	case "up", "k":
+		if p.sectionCursor > 0 {
+			p.sectionCursor--
+		}
+	case "down", "j":
+		if p.sectionCursor < len(p.sections)-1 {
+			p.sectionCursor++
+		}
+	case "a", "ф":
+		return actionAddSection, pc
+	case "d":
+		if len(p.sections) > 0 {
+			p.sections = append(p.sections[:p.sectionCursor], p.sections[p.sectionCursor+1:]...)
+			if p.sectionCursor >= len(p.sections) && p.sectionCursor > 0 {
+				p.sectionCursor--
+			}
 		}
 	}
 	return "", pc
@@ -117,25 +136,7 @@ func (p *panelEditPopup) handleInput(key string) (string, config.PanelConfig) {
 		case 1: // color
 			p.handleColorKey(key)
 		case 2: // sections list
-			switch key {
-			case "up", "k":
-				if p.sectionCursor > 0 {
-					p.sectionCursor--
-				}
-			case "down", "j":
-				if p.sectionCursor < len(p.sections)-1 {
-					p.sectionCursor++
-				}
-			case "a", "ф":
-				return "add_section", pc
-			case "d":
-				if len(p.sections) > 0 {
-					p.sections = append(p.sections[:p.sectionCursor], p.sections[p.sectionCursor+1:]...)
-					if p.sectionCursor >= len(p.sections) && p.sectionCursor > 0 {
-						p.sectionCursor--
-					}
-				}
-			}
+			return p.handleSectionListKey(key)
 		}
 	} else {
 		switch p.focusField {
@@ -147,7 +148,7 @@ func (p *panelEditPopup) handleInput(key string) (string, config.PanelConfig) {
 		case 2: // color
 			switch key {
 			case "a", "ф": // add first section
-				return "add_section", pc
+				return actionAddSection, pc
 			default:
 				p.handleColorKey(key)
 			}
@@ -229,6 +230,80 @@ func (p *panelEditPopup) focusColor(i int) string {
 	return focusInactive
 }
 
+func (p *panelEditPopup) viewSectionsContent(lines []string, inner int) []string {
+	// Color selector (field 1)
+	pre := p.focusColor(1)
+	colorName := config.ColorNames[p.colorIdx]
+	ansiCode := config.ResolveColorPublic(colorName)
+	colorSwatch := fmt.Sprintf("\033[%sm●\033[0m %s", ansiCode, colorName)
+	lines = append(lines,
+		fmt.Sprintf("  %sColor:%s \033[38;5;242m◄\033[0m %s \033[38;5;242m►\033[0m", pre, ansiReset, colorSwatch),
+		"",
+	)
+
+	// Sections list (field 2)
+	secPre := p.focusColor(2)
+	lines = append(lines, fmt.Sprintf("  %sSections:%s", secPre, ansiReset))
+	for i, sec := range p.sections {
+		cursor := "  "
+		if p.focusField == 2 && i == p.sectionCursor {
+			cursor = "\033[38;5;75m▸\033[0m "
+		}
+		secColor := sec.Color
+		if secColor == "" {
+			secColor = "38;5;245"
+		}
+		name := sec.Name
+		if name == "" {
+			name = "(unnamed)"
+		}
+		jqlPreview := sec.JQL
+		if len(jqlPreview) > inner-len(name)-10 {
+			jqlPreview = jqlPreview[:max(inner-len(name)-13, 0)] + "..."
+		}
+		lines = append(lines, fmt.Sprintf("  %s\033[1;%sm%s\033[0m  \033[38;5;239m%s\033[0m", cursor, secColor, name, jqlPreview))
+	}
+	if len(p.sections) == 0 {
+		lines = append(lines, "    \033[38;5;242m(empty)\033[0m")
+	}
+	hint := " \033[38;5;242mTab: next  Enter: edit  a: add  d: del  Ctrl+S: save  Esc: cancel\033[0m"
+	lines = append(lines, "", hint, "")
+	return lines
+}
+
+func (p *panelEditPopup) viewNoSectionsContent(lines []string, inner int) []string {
+	// JQL field (field 1)
+	pre := p.focusColor(1)
+	jqlW := inner - 8
+	var jqlContent string
+	if p.focusField == 1 {
+		jqlContent = p.jqlInput.view(jqlW)
+	} else {
+		jqlContent = p.jqlInput.viewReadonly(jqlW)
+	}
+	lines = append(lines, fmt.Sprintf("  %sJQL:%s   %s", pre, ansiReset, jqlContent))
+
+	if p.testStatus != "" {
+		lines = append(lines, "         "+p.testStatus)
+	} else {
+		lines = append(lines, "  \033[38;5;239mEnter on JQL field to test query\033[0m")
+	}
+	lines = append(lines, "")
+
+	// Color selector (field 2)
+	pre = p.focusColor(2)
+	colorName := config.ColorNames[p.colorIdx]
+	ansiCode := config.ResolveColorPublic(colorName)
+	colorSwatch := fmt.Sprintf("\033[%sm●\033[0m %s", ansiCode, colorName)
+	lines = append(lines,
+		fmt.Sprintf("  %sColor:%s \033[38;5;242m◄\033[0m %s \033[38;5;242m►\033[0m", pre, ansiReset, colorSwatch),
+		"",
+		" \033[38;5;242mTab: next  Enter: next/test  a: add section  Ctrl+S: save  Esc: cancel\033[0m",
+		"",
+	)
+	return lines
+}
+
 func (p *panelEditPopup) view(totalW, totalH int) string {
 	const popupW = 62
 	inner := popupW - 4
@@ -250,75 +325,9 @@ func (p *panelEditPopup) view(totalW, totalH int) string {
 	)
 
 	if p.hasSections() {
-		// Color selector (field 1)
-		pre = p.focusColor(1)
-		colorName := config.ColorNames[p.colorIdx]
-		ansiCode := config.ResolveColorPublic(colorName)
-		colorSwatch := fmt.Sprintf("\033[%sm●\033[0m %s", ansiCode, colorName)
-		lines = append(lines,
-			fmt.Sprintf("  %sColor:%s \033[38;5;242m◄\033[0m %s \033[38;5;242m►\033[0m", pre, ansiReset, colorSwatch),
-			"",
-		)
-
-		// Sections list (field 2)
-		secPre := p.focusColor(2)
-		lines = append(lines, fmt.Sprintf("  %sSections:%s", secPre, ansiReset))
-		for i, sec := range p.sections {
-			cursor := "  "
-			if p.focusField == 2 && i == p.sectionCursor {
-				cursor = "\033[38;5;75m▸\033[0m "
-			}
-			secColor := sec.Color
-			if secColor == "" {
-				secColor = "38;5;245"
-			}
-			name := sec.Name
-			if name == "" {
-				name = "(unnamed)"
-			}
-			jqlPreview := sec.JQL
-			if len(jqlPreview) > inner-len(name)-10 {
-				jqlPreview = jqlPreview[:max(inner-len(name)-13, 0)] + "..."
-			}
-			lines = append(lines, fmt.Sprintf("  %s\033[1;%sm%s\033[0m  \033[38;5;239m%s\033[0m", cursor, secColor, name, jqlPreview))
-		}
-		if len(p.sections) == 0 {
-			lines = append(lines, "    \033[38;5;242m(empty)\033[0m")
-		}
-		lines = append(lines, "")
-
-		hint := " \033[38;5;242mTab: next  Enter: edit  a: add  d: del  Ctrl+S: save  Esc: cancel\033[0m"
-		lines = append(lines, hint, "")
+		lines = p.viewSectionsContent(lines, inner)
 	} else {
-		// JQL field (field 1)
-		pre = p.focusColor(1)
-		jqlW := inner - 8
-		var jqlContent string
-		if p.focusField == 1 {
-			jqlContent = p.jqlInput.view(jqlW)
-		} else {
-			jqlContent = p.jqlInput.viewReadonly(jqlW)
-		}
-		lines = append(lines, fmt.Sprintf("  %sJQL:%s   %s", pre, ansiReset, jqlContent))
-
-		if p.testStatus != "" {
-			lines = append(lines, "         "+p.testStatus)
-		} else {
-			lines = append(lines, "  \033[38;5;239mEnter on JQL field to test query\033[0m")
-		}
-		lines = append(lines, "")
-
-		// Color selector (field 2)
-		pre = p.focusColor(2)
-		colorName := config.ColorNames[p.colorIdx]
-		ansiCode := config.ResolveColorPublic(colorName)
-		colorSwatch := fmt.Sprintf("\033[%sm●\033[0m %s", ansiCode, colorName)
-		lines = append(lines,
-			fmt.Sprintf("  %sColor:%s \033[38;5;242m◄\033[0m %s \033[38;5;242m►\033[0m", pre, ansiReset, colorSwatch),
-			"",
-			" \033[38;5;242mTab: next  Enter: next/test  a: add section  Ctrl+S: save  Esc: cancel\033[0m",
-			"",
-		)
+		lines = p.viewNoSectionsContent(lines, inner)
 	}
 
 	box := popupBox(fmt.Sprintf("Edit Panel %d", p.panelIdx+1), lines, popupW)

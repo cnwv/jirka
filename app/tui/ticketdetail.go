@@ -111,19 +111,14 @@ func (d *TicketDetailModel) buildLines() {
 	}
 
 	// Separator line
-	lines = append(lines, "")
-	sepW := wrapW
-	lines = append(lines, "\033[38;5;238m"+strings.Repeat("\u2500", sepW)+"\033[0m")
-	lines = append(lines, "")
+	lines = append(lines, "", "\033[38;5;238m"+strings.Repeat("\u2500", wrapW)+"\033[0m", "")
 
 	// Description
 	if t.Description != "" {
-		lines = append(lines, "\033[1;37mDescription\033[0m")
-		lines = append(lines, "")
+		lines = append(lines, "\033[1;37mDescription\033[0m", "")
 		desc := strings.ReplaceAll(t.Description, "\r", "")
 		desc = formatJiraMarkup(desc)
-		descLines := strings.Split(desc, "\n")
-		for _, dl := range descLines {
+		for dl := range strings.SplitSeq(desc, "\n") {
 			wrapped := wrapLine(dl, wrapW)
 			for _, wl := range wrapped {
 				lines = append(lines, fmt.Sprintf("\033[38;5;252m%s\033[0m", wl))

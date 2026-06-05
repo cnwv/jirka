@@ -46,9 +46,9 @@ func (p *sectionEditPopup) setTesting() {
 func (p *sectionEditPopup) handleKey(key string) (action string, sec config.SectionConfig) {
 	switch key {
 	case "esc":
-		return "close", sec
+		return actionClose, sec
 	case "ctrl+s":
-		return "save", p.build()
+		return actionSave, p.build()
 	case "tab":
 		p.focusField = (p.focusField + 1) % 3
 		return "", sec
@@ -62,10 +62,10 @@ func (p *sectionEditPopup) handleKey(key string) (action string, sec config.Sect
 		case 1:
 			if strings.TrimSpace(p.jqlInput.Value) != "" {
 				p.setTesting()
-				return "test_jql", sec
+				return actionTestJQL, sec
 			}
 		case 2:
-			return "save", p.build()
+			return actionSave, p.build()
 		}
 		return "", sec
 	default:

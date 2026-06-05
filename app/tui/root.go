@@ -331,7 +331,7 @@ func (m *RootModel) handlePopupKey(key string) (tea.Model, tea.Cmd) {
 func (m *RootModel) handleWinSwitcherKey(p *winSwitcherPopup, key string) (tea.Model, tea.Cmd) {
 	action, idx := p.handleKey(key)
 	switch action {
-	case "switch":
+	case actionSwitch:
 		m.popup = nil
 		if idx != m.activeWin {
 			m.switchWindow(idx)
@@ -342,14 +342,14 @@ func (m *RootModel) handleWinSwitcherKey(p *winSwitcherPopup, key string) (tea.M
 				)
 			}
 		}
-	case "new":
+	case actionNew:
 		m.popup = newNewWindowPopup()
-	case "delete":
+	case actionDelete:
 		if len(m.windows) > 1 {
 			m.deleteWindow(idx)
 			m.popup = m.newWindowSwitcherPopup()
 		}
-	case "close":
+	case actionClose:
 		m.popup = nil
 	}
 	return m, nil
@@ -358,7 +358,7 @@ func (m *RootModel) handleWinSwitcherKey(p *winSwitcherPopup, key string) (tea.M
 func (m *RootModel) handleNewWindowKey(p *newWindowPopup, key string) (tea.Model, tea.Cmd) {
 	action, win := p.handleKey(key)
 	switch action {
-	case "done":
+	case actionDone:
 		m.popup = nil
 		m.addWindow(win)
 		if !m.isExample {
@@ -367,7 +367,7 @@ func (m *RootModel) handleNewWindowKey(p *newWindowPopup, key string) (tea.Model
 				waitForTickets(m.sub),
 			)
 		}
-	case "close":
+	case actionClose:
 		m.popup = nil
 	}
 	return m, nil
@@ -376,9 +376,9 @@ func (m *RootModel) handleNewWindowKey(p *newWindowPopup, key string) (tea.Model
 func (m *RootModel) handlePanelEditKey(p *panelEditPopup, key string) (tea.Model, tea.Cmd) {
 	action, pc := p.handleKey(key)
 	switch action {
-	case "test_jql":
+	case actionTestJQL:
 		return m, testJQL(m.jiraClient, p.currentJQL())
-	case "save":
+	case actionSave:
 		m.popup = nil
 		m.updatePanel(p.panelIdx, pc)
 		if !m.isExample && (pc.JQL != "" || len(pc.Sections) > 0) {
@@ -387,12 +387,12 @@ func (m *RootModel) handlePanelEditKey(p *panelEditPopup, key string) (tea.Model
 				waitForTickets(m.sub),
 			)
 		}
-	case "edit_section":
+	case actionEditSection:
 		sec := p.sections[p.sectionCursor]
 		m.popup = newSectionEditPopup(p.panelIdx, p.sectionCursor, sec)
-	case "add_section":
+	case actionAddSection:
 		m.popup = newSectionEditPopup(p.panelIdx, -1, config.SectionConfig{})
-	case "close":
+	case actionClose:
 		m.popup = nil
 	}
 	return m, nil
@@ -401,9 +401,9 @@ func (m *RootModel) handlePanelEditKey(p *panelEditPopup, key string) (tea.Model
 func (m *RootModel) handleSectionEditKey(p *sectionEditPopup, key string) (tea.Model, tea.Cmd) {
 	action, sec := p.handleKey(key)
 	switch action {
-	case "test_jql":
+	case actionTestJQL:
 		return m, testJQL(m.jiraClient, p.currentJQL())
-	case "save":
+	case actionSave:
 		// Update section in the panel config, then reopen panel edit
 		pc := &m.windows[m.activeWin].Panels[p.panelIdx]
 		if p.sectionIdx >= 0 {
@@ -412,7 +412,7 @@ func (m *RootModel) handleSectionEditKey(p *sectionEditPopup, key string) (tea.M
 			pc.Sections = append(pc.Sections, sec)
 		}
 		m.popup = newPanelEditPopup(p.panelIdx, *pc)
-	case "close":
+	case actionClose:
 		pc := m.windows[m.activeWin].Panels[p.panelIdx]
 		m.popup = newPanelEditPopup(p.panelIdx, pc)
 	}

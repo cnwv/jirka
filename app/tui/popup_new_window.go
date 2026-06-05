@@ -41,7 +41,7 @@ func (p *newWindowPopup) handlePaste(s string) {
 	}
 }
 
-// handleKey returns "done" with a built WindowConfig, "back" to go to step 0, or "close".
+// handleKey returns actionDone with a built WindowConfig, actionBack to go to step 0, or actionClose.
 func (p *newWindowPopup) handleKey(key string) (action string, win config.WindowConfig) {
 	switch p.step {
 	case 0: // name input
@@ -51,7 +51,7 @@ func (p *newWindowPopup) handleKey(key string) (action string, win config.Window
 				p.step = 1
 			}
 		case "esc":
-			return "close", win
+			return actionClose, win
 		default:
 			p.nameInput.handleKey(key)
 		}
@@ -67,10 +67,10 @@ func (p *newWindowPopup) handleKey(key string) (action string, win config.Window
 			}
 		case "enter":
 			preset := gridPresets[p.gridSel]
-			return "done", p.buildWindow(preset.rows, preset.cols)
+			return actionDone, p.buildWindow(preset.rows, preset.cols)
 		case "esc":
 			p.step = 0
-			return "back", win
+			return actionBack, win
 		}
 	}
 	return "", win
